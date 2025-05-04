@@ -4,8 +4,8 @@ namespace PhotoCopier;
 
 internal struct Photo
 {
-    internal required string File { get; init; }
-    internal required string[] CompanionFiles { get; init; }
+    internal required string Path { get; init; }
+    internal required string[] CompanionPaths { get; init; }
 }
 
 internal struct CopyResult
@@ -25,17 +25,65 @@ internal static class Manager
             .ToArray();
     }
 
-    internal static Task<List<Photo>> GetPhotosAsync(string drive) => Task.Run(() =>
+    internal static Task<List<Photo>> GetPhotosAsync(string drive, string extension) => Task.Run(() =>
     {
         var paths = new List<Photo>();
-        GetPhotos(paths, Path.Combine(drive, "DCIM"), ".ARW");
+        GetPhotos(paths, Path.Combine(drive, "DCIM"), extension);
         return paths;
+    });
+
+    private static void GetPhotos(List<Photo> paths, string path, string extension)
+    {
+        if (!Directory.Exists(path))
+            return;
+
+        foreach (var subDirectory in Directory.GetDirectories(path))
+            GetPhotos(paths, subDirectory, extension);
+
+        var files = Directory.GetFiles(path);
+
+        foreach (var file in files)
+        {
+            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
+            var fileExtension = Path.GetExtension(file);
+
+            if (!fileExtension.Equals(extension, StringComparison.InvariantCultureIgnoreCase))
+                continue;
+
+            var companionFiles = files
+                .Where(f => Path.GetFileNameWithoutExtension(f).Equals(fileNameWithoutExtension, StringComparison.InvariantCultureIgnoreCase))
+                .Where(f => !Path.GetExtension(f).Equals(fileExtension, StringComparison.InvariantCultureIgnoreCase))
+                .ToArray();
+
+            paths.Add(new Photo { Path = file, CompanionPaths = companionFiles });
+        }
+    }
+
+    internal static Task<List<Photo>> FilterPhotosAsync(List<Photo> photos, string destinationDirectory, bool overwrite) => Task.Run(() =>
+    {
+        if (overwrite)
+            return photos;
+
+        var filtered = new List<Photo>();
+
+        foreach (var photo in photos)
+        {
+            var fileName = Path.GetFileName(photo.Path);
+            var subDirectory = File.GetCreationTime(photo.Path).ToDirectoryName();
+            var destinationPath = Path.Combine(destinationDirectory, subDirectory, fileName);
+
+            if (File.Exists(destinationPath))
+                continue;
+
+            filtered.Add(photo);
+        }
+
+        return filtered;
     });
 
     internal static async Task<CopyResult> CopyAsync(List<Photo> photos,
         string destinationDirectory,
         bool verify,
-        bool overwrite,
         Action<int, int> updateProgress,
         CancellationToken cancellationToken)
     {
@@ -46,36 +94,32 @@ internal static class Manager
         {
             var photo = photos[i];
 
-            var subDirectory = File.GetCreationTime(photo.File).ToString("yyyyMMdd");
-            var fileName = Path.GetFileName(photo.File);
+            var subDirectory = File.GetCreationTime(photo.Path).ToDirectoryName();
+            var fileName = Path.GetFileName(photo.Path);
 
             var destinationSubDirectory = Path.Combine(destinationDirectory, subDirectory);
             if (!Directory.Exists(destinationSubDirectory))
                 Directory.CreateDirectory(destinationSubDirectory);
 
             var destinationPath = Path.Combine(destinationSubDirectory, fileName);
-            if (!overwrite && File.Exists(destinationPath))
-                continue;
 
-            await FileUtils.CopyAsync(photo.File, destinationPath, overwrite, cancellationToken).ConfigureAwait(false);
+            await FileUtils.CopyAsync(photo.Path, destinationPath, cancellationToken).ConfigureAwait(false);
 
             if (verify)
             {
-                var hashMatch = await FileUtils.CompareHash(photo.File, destinationPath, cancellationToken).ConfigureAwait(false);
+                var hashMatch = await FileUtils.CompareHash(photo.Path, destinationPath, cancellationToken).ConfigureAwait(false);
                 if (!hashMatch)
                     failedHashChecks++;
             }
 
-            Debug.WriteLine($"Copied {photo.File} to {destinationPath}");
+            Debug.WriteLine($"Copied {photo.Path} to {destinationPath}");
 
-            foreach (var companionFile in photo.CompanionFiles)
+            foreach (var companionFile in photo.CompanionPaths)
             {
                 var companionFileName = Path.GetFileName(companionFile);
                 var companionDestinationPath = Path.Combine(destinationSubDirectory, companionFileName);
-                if (!overwrite && File.Exists(companionDestinationPath))
-                    continue;
 
-                await FileUtils.CopyAsync(companionFile, companionDestinationPath, overwrite, cancellationToken).ConfigureAwait(false);
+                await FileUtils.CopyAsync(companionFile, companionDestinationPath, cancellationToken).ConfigureAwait(false);
 
                 Debug.WriteLine($"Copied {companionFile} to {companionDestinationPath}");
             }
@@ -86,26 +130,5 @@ internal static class Manager
         }
 
         return new CopyResult { CopiedPhotos = copiedPhotos, FailedHashChecks = failedHashChecks };
-    }
-
-    private static void GetPhotos(List<Photo> paths, string path, string extension)
-    {
-        if (!Directory.Exists(path))
-            return;
-
-        foreach (var subDirectory in Directory.GetDirectories(path))
-            GetPhotos(paths, subDirectory, extension);
-
-        foreach (var file in Directory.GetFiles(path))
-        {
-            if (!string.Equals(Path.GetExtension(file), extension, StringComparison.InvariantCultureIgnoreCase))
-                continue;
-
-            var companionFiles = Directory.GetFiles(path, $"{Path.GetFileNameWithoutExtension(file)}.*", SearchOption.TopDirectoryOnly)
-                .Where(f => !string.Equals(Path.GetExtension(f), extension, StringComparison.InvariantCultureIgnoreCase))
-                .ToArray();
-
-            paths.Add(new Photo { File = file, CompanionFiles = companionFiles });
-        }
     }
 }

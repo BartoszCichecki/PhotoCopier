@@ -4,11 +4,8 @@ namespace PhotoCopier;
 
 internal static class FileUtils
 {
-    public static async Task CopyAsync(string sourcePath, string destinationPath, bool overwrite = false, CancellationToken cancellationToken = default)
+    public static async Task CopyAsync(string sourcePath, string destinationPath, CancellationToken cancellationToken = default)
     {
-        if (!overwrite && File.Exists(destinationPath))
-            return;
-
         try
         {
             await using Stream source = File.Open(sourcePath, FileMode.Open);

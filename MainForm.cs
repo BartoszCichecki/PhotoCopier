@@ -65,19 +65,20 @@ public partial class MainForm : Form
 
         progressBar.Style = ProgressBarStyle.Marquee;
 
-        var photos = await Manager.GetPhotosAsync(drive);
+        var photos = await Manager.GetPhotosAsync(drive, extension);
+        var filteredPhotos = await Manager.FilterPhotosAsync(photos, destination, overwrite);
 
         progressBar.Style = ProgressBarStyle.Blocks;
 
         CopyResult? result = null;
         try
         {
-            result = await Manager.CopyAsync(photos, destination, overwrite, verify, (index, count) =>
+            result = await Manager.CopyAsync(filteredPhotos, destination, verify, (index, count) =>
             {
                 progressBar.Invoke(() =>
                 {
-                    progressBar.Value = index;
                     progressBar.Maximum = count;
+                    progressBar.Value = index;
                 });
             }, token);
         }
