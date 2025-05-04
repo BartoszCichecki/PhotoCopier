@@ -2,7 +2,11 @@ namespace PhotoCopier;
 
 public partial class MainForm : Form
 {
-    private CancellationTokenSource? cts;
+    private const int WmDeviceChange = 0x0219;
+    private const int DbtDeviceArrival = 0x8000;
+    private const int DbtDeviceRemovalComplete = 0x8004;
+
+    private CancellationTokenSource? _cts;
 
     public MainForm()
     {
@@ -11,14 +15,30 @@ public partial class MainForm : Form
         extensionTextBox.Text = "ARW";
         destinationTextBox.Text = "D:\\Photos";
 
+        RefreshDrives();
+    }
+
+    protected override void WndProc(ref Message m)
+    {
+        base.WndProc(ref m);
+
+        if (m is { Msg: WmDeviceChange, WParam: DbtDeviceArrival or DbtDeviceRemovalComplete })
+            RefreshDrives();
+    }
+
+    private void RefreshDrives()
+    {
+        if (_cts != null)
+            return;
+
         var drives = Manager.GetDrives();
         driveComboBox.Items.Clear();
 
-        if (drives.Length > 0)
-        {
-            driveComboBox.Items.AddRange(drives.Cast<object>().ToArray());
-            driveComboBox.SelectedIndex = 0;
-        }
+        if (drives.Length <= 0)
+            return;
+
+        driveComboBox.Items.AddRange(drives.Cast<object>().ToArray());
+        driveComboBox.SelectedIndex = 0;
     }
 
     private void DestinationSelectButton_Click(object sender, EventArgs e)
@@ -33,14 +53,14 @@ public partial class MainForm : Form
     // ReSharper disable once AsyncVoidMethod
     private async void CopyButton_Click(object sender, EventArgs e)
     {
-        if (cts != null)
+        if (_cts != null)
         {
-            await cts.CancelAsync();
+            await _cts.CancelAsync();
             return;
         }
 
-        cts = new CancellationTokenSource();
-        var token = cts.Token;
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
 
         var extension = extensionTextBox.Text;
         if (!extension.StartsWith('.'))
@@ -94,7 +114,7 @@ public partial class MainForm : Form
         destinationSelectButton.Enabled = true;
         copyButton.Text = "Copy";
 
-        cts = null;
+        _cts = null;
 
         if (!result.HasValue)
             return;
@@ -118,7 +138,7 @@ public partial class MainForm : Form
 
     private void Form_Closing(object sender, FormClosingEventArgs e)
     {
-        if (cts == null)
+        if (_cts == null)
             return;
 
         e.Cancel = true;
