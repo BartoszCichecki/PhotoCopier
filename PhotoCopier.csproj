@@ -24,6 +24,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Compile Remove="assets\**" />
+		<EmbeddedResource Remove="assets\**" />
+		<None Remove="assets\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Remove=".gitignore" />
 		<None Remove="PhotoCopier.sln.DotSettings" />
 		<None Remove="README.md" />
