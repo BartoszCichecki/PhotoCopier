@@ -142,11 +142,19 @@ public partial class MainForm : Form
             var destination = destinationTextBox.Text;
             if (!Directory.Exists(destination))
             {
-                MessageBox.Show(Strings.DirectoryDoesNotExist_Text,
-                    Strings.DirectoryDoesNotExist_Caption,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                return;
+                try
+                {
+                    Directory.CreateDirectory(destination);
+                }
+                catch
+                {
+
+                    MessageBox.Show(Strings.DirectoryDoesNotExist_Text,
+                        Strings.DirectoryDoesNotExist_Caption,
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
+                }
             }
 
             var folderName = folderNameTextBox.Text;

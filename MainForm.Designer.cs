@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             driveLabel = new Label();
             destinationLabel = new Label();
             progressBar = new ProgressBar();
@@ -91,6 +92,7 @@
             destinationTextBox.Name = "destinationTextBox";
             destinationTextBox.Size = new Size(375, 23);
             destinationTextBox.TabIndex = 5;
+            destinationTextBox.TextChanged += DestinationTextBox_TextChanged;
             // 
             // destinationSelectButton
             // 
@@ -140,6 +142,7 @@
             verifyChecksumsCheckBox.TabIndex = 10;
             verifyChecksumsCheckBox.Text = "Verify checksums";
             verifyChecksumsCheckBox.UseVisualStyleBackColor = true;
+            verifyChecksumsCheckBox.TextChanged += VerifyChecksumsCheckBox_CheckedChanged;
             // 
             // overwriteExistingCheckBox
             // 
@@ -150,6 +153,7 @@
             overwriteExistingCheckBox.TabIndex = 11;
             overwriteExistingCheckBox.Text = "Overwrite existing";
             overwriteExistingCheckBox.UseVisualStyleBackColor = true;
+            overwriteExistingCheckBox.TextChanged += OverwriteExistingCheckBox_CheckedChanged;
             // 
             // copyCompanionFilesCheckBox
             // 
@@ -160,6 +164,7 @@
             copyCompanionFilesCheckBox.TabIndex = 12;
             copyCompanionFilesCheckBox.Text = "Copy companion files";
             copyCompanionFilesCheckBox.UseVisualStyleBackColor = true;
+            copyCompanionFilesCheckBox.CheckedChanged += CopyCompanionFilesCheckBox_CheckedChanged;
             // 
             // groupBox1
             // 
@@ -191,6 +196,7 @@
             folderNameTextBox.Name = "folderNameTextBox";
             folderNameTextBox.Size = new Size(417, 23);
             folderNameTextBox.TabIndex = 14;
+            folderNameTextBox.TextChanged += FolderNameTextBox_TextChanged;
             // 
             // MainForm
             // 
@@ -209,6 +215,7 @@
             Controls.Add(progressBar);
             Controls.Add(destinationLabel);
             Controls.Add(driveLabel);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
             MaximumSize = new Size(1200, 800);
             MinimumSize = new Size(500, 380);
