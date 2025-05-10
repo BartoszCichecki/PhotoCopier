@@ -59,7 +59,7 @@ internal static class Manager
         }
     }
 
-    internal static Task<List<Photo>> FilterPhotosAsync(List<Photo> photos, string destinationDirectory, bool overwrite) => Task.Run(() =>
+    internal static Task<List<Photo>> FilterPhotosAsync(List<Photo> photos, string destinationDirectory, string folderName, bool overwrite) => Task.Run(() =>
     {
         if (overwrite)
             return photos;
@@ -69,7 +69,7 @@ internal static class Manager
         foreach (var photo in photos)
         {
             var fileName = Path.GetFileName(photo.Path);
-            var subDirectory = File.GetCreationTime(photo.Path).ToDirectoryName();
+            var subDirectory = File.GetCreationTime(photo.Path).ToString(folderName);
             var destinationPath = Path.Combine(destinationDirectory, subDirectory, fileName);
 
             if (File.Exists(destinationPath))
@@ -83,6 +83,8 @@ internal static class Manager
 
     internal static async Task<CopyResult> CopyAsync(List<Photo> photos,
         string destinationDirectory,
+        string folderName,
+        bool copyCompanionFiles,
         bool verify,
         Action<int, int> updateProgress,
         CancellationToken cancellationToken)
@@ -94,7 +96,7 @@ internal static class Manager
         {
             var photo = photos[i];
 
-            var subDirectory = File.GetCreationTime(photo.Path).ToDirectoryName();
+            var subDirectory = File.GetCreationTime(photo.Path).ToString(folderName);
             var fileName = Path.GetFileName(photo.Path);
 
             var destinationSubDirectory = Path.Combine(destinationDirectory, subDirectory);
@@ -114,14 +116,18 @@ internal static class Manager
 
             Debug.WriteLine($"Copied {photo.Path} to {destinationPath}");
 
-            foreach (var companionFile in photo.CompanionPaths)
+            if (copyCompanionFiles)
             {
-                var companionFileName = Path.GetFileName(companionFile);
-                var companionDestinationPath = Path.Combine(destinationSubDirectory, companionFileName);
+                foreach (var companionFile in photo.CompanionPaths)
+                {
+                    var companionFileName = Path.GetFileName(companionFile);
+                    var companionDestinationPath = Path.Combine(destinationSubDirectory, companionFileName);
 
-                await FileUtils.CopyAsync(companionFile, companionDestinationPath, cancellationToken).ConfigureAwait(false);
+                    await FileUtils.CopyAsync(companionFile, companionDestinationPath, cancellationToken)
+                        .ConfigureAwait(false);
 
-                Debug.WriteLine($"Copied {companionFile} to {companionDestinationPath}");
+                    Debug.WriteLine($"Copied {companionFile} to {companionDestinationPath}");
+                }
             }
 
             copiedPhotos++;
