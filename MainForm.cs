@@ -184,7 +184,7 @@ public partial class MainForm : Form
             CopyResult? result = null;
             try
             {
-                result = await Manager.CopyAsync(filteredPhotos, folderName, destination, copyCompanionFiles, verify,
+                result = await Manager.CopyAsync(filteredPhotos, destination, folderName, copyCompanionFiles, verify,
                     (index, count) =>
                     {
                         progressBar.Invoke(() =>
